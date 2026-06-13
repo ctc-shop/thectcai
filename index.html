@@ -253,14 +253,15 @@ Try one of these or type your own:</div>
 
       if (!res.ok) throw new Error(`Server error: ${res.status}`);
 
-      const data = await res.json();
-
-      // Pull the lesson plan out of n8n's response
-      const planText =
-        data.lesson_plan     ||
-        data.final_message   ||
-        data.message         ||
-        JSON.stringify(data, null, 2);
+      // Handle both JSON and plain text responses from n8n
+      const raw = await res.text();
+      let planText;
+      try {
+        const data = JSON.parse(raw);
+        planText = data.lesson_plan || data.final_message || data.message || JSON.stringify(data, null, 2);
+      } catch {
+        planText = raw;
+      }
 
       hideTyping();
       addMsg('bot', planText);
