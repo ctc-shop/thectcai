@@ -125,7 +125,6 @@ Try one of these or type your own:</div>
     wrap.appendChild(bub);
     chat.appendChild(wrap);
     chat.scrollTop = chat.scrollHeight;
-    return bub;
   }
 
   function showTyping() {
@@ -143,17 +142,6 @@ Try one of these or type your own:</div>
 
   function hideTyping() {
     document.getElementById('typing')?.remove();
-  }
-
-  function extractText(data) {
-    // Try every possible field n8n might return
-    if (typeof data === 'string') return data;
-    if (Array.isArray(data)) {
-      const first = data[0];
-      if (typeof first === 'string') return first;
-      return first?.lesson_plan || first?.final_message || first?.message || first?.output || first?.text || first?.content || JSON.stringify(data, null, 2);
-    }
-    return data.lesson_plan || data.final_message || data.message || data.output || data.text || data.content || JSON.stringify(data, null, 2);
   }
 
   async function send() {
@@ -176,27 +164,20 @@ Try one of these or type your own:</div>
 
       if (!res.ok) throw new Error('Server error: ' + res.status);
 
-      const raw = await res.text();
-      console.log('n8n response:', raw); // check browser console F12 if blank
-
-      let planText;
-      try {
-        const parsed = JSON.parse(raw);
-        planText = extractText(parsed);
-      } catch {
-        planText = raw;
-      }
-
-      if (!planText || planText.trim() === '') {
-        planText = '⚠ n8n returned an empty response. Open F12 Console and check the "n8n response:" log to see what was received.';
-      }
+      // Read as plain text — works whether n8n sends text or JSON
+      const planText = await res.text();
 
       hideTyping();
-      addMsg('bot', planText);
+
+      if (!planText || planText.trim() === '') {
+        addMsg('bot', '⚠ n8n returned an empty response. Check your workflow is Active and Node 6 Response Body is set correctly.');
+      } else {
+        addMsg('bot', planText);
+      }
 
     } catch (err) {
       hideTyping();
-      addMsg('bot', '⚠ Could not reach the n8n webhook.\n\nMake sure:\n1. n8n is running\n2. WEBHOOK_URL at the top of this file is correct\n3. CORS is allowed in n8n settings\n\nError: ' + err.message);
+      addMsg('bot', '⚠ Could not reach the n8n webhook.\n\nError: ' + err.message);
     }
 
     sendBtn.disabled = false;
